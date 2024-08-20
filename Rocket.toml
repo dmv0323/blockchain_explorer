@@ -1,0 +1,9 @@
+[global]
+address = "0.0.0.0"
+port = 8000
+
+[development]
+databases = { pg_db = { url = "postgres://postgres:postgres@db:5435/ot_prime" } }
+
+[production]
+databases = { pg_db = { url = "postgres://postgres:postgres@db:5435/ot_prime" } }

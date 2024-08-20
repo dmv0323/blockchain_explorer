@@ -1,0 +1,36 @@
+version: '3.9'
+
+volumes:
+  store:
+    driver: local
+  bundle:
+    driver: local
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    stdin_open: true
+    tty: true
+    env_file:
+      - ./.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    ports:
+      - "5435:5435"
+    volumes:
+      - store:/var/lib/postgresql/data
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
