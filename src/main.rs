@@ -2,7 +2,6 @@
 
 use rocket::serde::json::Json;
 use reqwest;
-use serde::Deserialize;
 use std::collections::HashMap;
 
 #[get("/")]
