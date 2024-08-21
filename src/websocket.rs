@@ -1,4 +1,5 @@
 // src/websocket.rs
+
 use rocket::tokio::sync::broadcast;
 use rocket::State;
 use serde::{Deserialize, Serialize};
@@ -8,28 +9,48 @@ use tokio_tungstenite::connect_async;
 use futures_util::{StreamExt, SinkExt};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct Block {
+pub struct Block {
     id: String,
     data: String,
 }
 
 #[get("/blockstream")]
-async fn blockstream(tx: &State<Arc<broadcast::Sender<Block>>>) -> Result<(), rocket::http::Status> {
-    let (ws_stream, _) = connect_async("ws://localhost:8000/blockstream").await.map_err(|_| rocket::http::Status::InternalServerError)?;
-    let (write, read) = ws_stream.split();
+pub async fn blockstream(tx: &State<Arc<broadcast::Sender<Block>>>) -> Result<(), rocket::http::Status> {
+    let (ws_stream, _) = match connect_async("ws://localhost:8000/blockstream").await {
+        Ok(ws) => ws,
+        Err(_) => {
+            eprintln!("Failed to connect to WebSocket");
+            return Err(rocket::http::Status::InternalServerError);
+        },
+    };
+
+    let (mut write, mut read) = ws_stream.split();
     let mut rx = tx.subscribe();
-    let write = write.fuse();
-    let read = read.fuse();
 
     tokio::select! {
         _ = async {
             while let Ok(block) = rx.recv().await {
-                let message = serde_json::to_string(&block).unwrap();
-                write.send(Message::Text(message)).await.unwrap();
+                let message = match serde_json::to_string(&block) {
+                    Ok(msg) => msg,
+                    Err(_) => {
+                        eprintln!("Failed to serialize block to JSON");
+                        continue;
+                    }
+                };
+                if let Err(_) = write.send(Message::Text(message)).await {
+                    eprintln!("Failed to send message");
+                    break;
+                }
             }
         } => {},
         _ = async {
-            while let Some(Ok(message)) = read.next().await {
+            while let Some(result) = read.next().await {
+                match result {
+                    Ok(_message) => {
+                      // Lida com msgs recebidas, caso necessario
+                    },
+                    Err(e) => eprintln!("WebSocket read error: {:?}", e),
+                }
             }
         } => {},
     }
@@ -39,6 +60,9 @@ async fn blockstream(tx: &State<Arc<broadcast::Sender<Block>>>) -> Result<(), ro
 
 pub async fn start_blockstream() -> Arc<broadcast::Sender<Block>> {
     let (tx, _) = broadcast::channel(100);
+    let tx = Arc::new(tx);
+
+    let tx_clone = Arc::clone(&tx);
     tokio::spawn(async move {
         let mut count = 0;
         loop {
@@ -46,11 +70,13 @@ pub async fn start_blockstream() -> Arc<broadcast::Sender<Block>> {
                 id: format!("block_{}", count),
                 data: "Block data".to_string(),
             };
-            tx.send(block).unwrap();
+            if let Err(_) = tx_clone.send(block) {
+                eprintln!("Failed to send block to channel");
+            }
             count += 1;
             tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         }
     });
 
-    Arc::new(tx)
+    tx
 }
