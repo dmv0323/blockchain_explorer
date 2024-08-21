@@ -50,7 +50,7 @@ O projeto é organizado da seguinte maneira:
 
 ## Funcionalidades
 
-- **Exploração de Transações**: Permite visualizar e buscar informações sobre transações na blockchain.
+- **Exploração de Transações**: Permite visualizar e buscar informações sobre transações na blockchain. 
 - **Visualização de Endereços**: Permite visualizar e buscar informações sobre endereços na blockchain.
 - **Mempool**: Gerencia transações pendentes antes de serem confirmadas na blockchain.
 
