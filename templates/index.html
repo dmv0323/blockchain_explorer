@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Explorer</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const ws = new WebSocket("ws://localhost:8000/blockstream");
+            ws.onmessage = function(event) {
+                const block = JSON.parse(event.data);
+                const log = document.getElementById("block-log");
+                const entry = document.createElement("div");
+                entry.textContent = `Block ID: ${block.id}, Data: ${block.data}`;
+                log.appendChild(entry);
+            };
+        });
+    </script>
+</head>
+<body>
+    <h1>Bem-vindo ao Blockchain Explorer!</h1>
+    <div id="block-log"></div>
+</body>
+</html>
